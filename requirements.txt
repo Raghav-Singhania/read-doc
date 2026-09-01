@@ -1,0 +1,26 @@
+# Phase 1 dependencies. Install with:
+#   pip install -r requirements.txt
+
+# --- Web layer ---
+fastapi                 # app, routing, error responses
+python-multipart        # FastAPI needs this to parse the PDF upload (UploadFile)
+pydantic-settings       # config module, validates env vars at startup
+
+# --- PDF ingest ---
+pdfplumber              # text extraction
+langchain-community     # PDFPlumberLoader lives here
+langchain-text-splitters # RecursiveCharacterTextSplitter
+
+# --- RAG ---
+langchain               # create_stuff_documents_chain, create_retrieval_chain
+langchain-google-genai  # both gemini-embedding-001 embeddings and
+                        # ChatGoogleGenerativeAI for answer generation
+langchain-chroma        # vector store wrapper
+chromadb                # the persistent Chroma client itself
+
+# --- Tests ---
+pytest
+httpx                   # required by FastAPI's TestClient
+
+# --- Env ---
+python-dotenv           # import name is `dotenv`; already required by pydantic-settings

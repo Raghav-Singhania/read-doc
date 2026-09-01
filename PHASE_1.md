@@ -11,12 +11,13 @@ plain HTML + vanilla JS served by FastAPI.
 
 ## 1. Setup
 
-- [ ] `uv` project, Python 3.12, `pyproject.toml`
-- [ ] `.env.example` — `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
-- [ ] Config module (pydantic-settings) — keys, storage paths, chunk size,
+- [x] Python 3.14.5 via pyenv, stdlib `venv` in `env/`, `requirements.txt`
+- [x] `.env.example` — `GEMINI_API_KEY` (Gemini serves both embeddings and
+      answer generation, so no `ANTHROPIC_API_KEY`)
+- [x] Config module (pydantic-settings) — keys, storage paths, chunk size,
       overlap, retrieval `k`, max upload size. Validates at startup, not on
       first use
-- [ ] FastAPI app, static file mounting, `GET /health`
+- [x] FastAPI app, static file mounting, `GET /health`
 
 ## 2. Ingest
 
