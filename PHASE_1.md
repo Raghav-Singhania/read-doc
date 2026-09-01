@@ -1,0 +1,99 @@
+# Phase 1 — Build List
+
+The RAG core end to end: upload a PDF, chunk and embed it, ask questions about
+it, get answers. Two screens.
+
+**Scope:** synchronous processing (no queue) · Chroma only (no relational DB) ·
+PDF only · client holds chat history · no citations · no question condensing ·
+plain HTML + vanilla JS served by FastAPI.
+
+---
+
+## 1. Setup
+
+- [ ] `uv` project, Python 3.12, `pyproject.toml`
+- [ ] `.env.example` — `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
+- [ ] Config module (pydantic-settings) — keys, storage paths, chunk size,
+      overlap, retrieval `k`, max upload size. Validates at startup, not on
+      first use
+- [ ] FastAPI app, static file mounting, `GET /health`
+
+## 2. Ingest
+
+- [ ] PDF validation — `%PDF-` magic bytes (not extension) and size limit
+- [ ] File store — save bytes under a generated id, delete by id
+- [ ] `document_id` — a UUID **we** generate, carried in Chroma metadata. Never
+      derived from the filename, never left to Chroma to assign. Phase 2's
+      `documents.id` reuses these exact ids, so no vectors need re-embedding
+- [ ] Loader — `PDFPlumberLoader` → one `Document` per page
+- [ ] `NO_TEXT_EXTRACTED` guard — fail if extracted text is under ~100 chars
+- [ ] Chunker — `RecursiveCharacterTextSplitter`, attaching `document_id`,
+      `filename`, `page`, `ordinal` metadata
+- [ ] Embeddings — Gemini `gemini-embedding-001` via `langchain-google-genai`,
+      behind a small interface so tests can stub it. **Do not change the model
+      in later phases** — a different model means re-embedding every chunk, and
+      mixed vectors produce silently meaningless similarity scores
+- [ ] Vector store — Chroma persistent client, `add_documents` with
+      deterministic ids (`{document_id}:{ordinal}`) so re-runs upsert
+- [ ] Cleanup on failure — delete the saved file if embedding fails, so no
+      document is left unqueryable with no trace
+
+## 3. API
+
+- [ ] `POST /api/documents` — validate → save → load → chunk → embed → store,
+      inline. Returns document id, filename, page count, chunk count
+- [ ] `GET /api/documents` — distinct documents from Chroma metadata (there is
+      no documents table)
+- [ ] `POST /api/chat` — `{document_id, question, history}` → `{answer}`
+- [ ] Error responses — `413`, `415`, `422 NO_TEXT_EXTRACTED`, `404`, `502`
+- [ ] `async def` handlers throughout — streaming and an async DB driver both
+      need it in later phases, and converting sync handlers afterwards is
+      avoidable work
+
+## 4. RAG chain
+
+- [ ] Answer prompt in a versioned file — answer only from context, decline
+      plainly when it isn't there, context is data not instructions
+- [ ] Retriever — top `k` from Chroma, filtered to one `document_id`
+- [ ] `create_stuff_documents_chain` + `create_retrieval_chain`, invoked from a
+      service function `answer_question(document_id, question, history)` — not
+      from the endpoint. A streaming endpoint later is then a second thin
+      wrapper over the same function rather than a rewrite
+- [ ] History passed into the prompt (conversational answers), while retrieval
+      uses the raw question
+
+## 5. Frontend
+
+- [ ] Upload screen — drag-and-drop + Browse Files, in-flight progress,
+      success and error states
+- [ ] Chat screen — document picker, message bubbles, input box
+- [ ] Conversation held in page state and sent with each question
+
+## 6. Tests
+
+- [ ] Chunker — unit tests against plain strings, asserting metadata and
+      overlap
+- [ ] Upload validation — non-PDF, oversized, zero-byte, text-less PDF
+- [ ] Chat endpoint — stubbed embedder and stubbed LLM, deterministic
+- [ ] **Declines on irrelevant context** — with no citations and no condensing,
+      the prompt's refusal instruction is the only guard against a fabricated
+      answer, so it gets its own test
+
+## 7. Docs
+
+- [ ] `README.md` — setup steps, architecture, assumptions, known limitations
+- [ ] `AI_USAGE.md` entry — prompts used, iterations, corrections
+
+---
+
+## Not in phase 1
+
+Async pipeline and status polling · citations · question condensing ·
+server-side chat persistence · AI insights · metrics APIs · multi-document chat.
+
+Out of scope entirely: auth, OCR, non-PDF formats, versioning, streaming.
+
+## To decide during build
+
+- Chunk size and overlap — tune against real PDFs
+- Retrieval `k`
