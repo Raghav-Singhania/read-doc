@@ -42,3 +42,6 @@ venv/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+
+# --- App data (uploaded PDFs + Chroma database) ---
+storage/

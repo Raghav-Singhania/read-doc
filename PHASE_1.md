@@ -21,22 +21,22 @@ plain HTML + vanilla JS served by FastAPI.
 
 ## 2. Ingest
 
-- [ ] PDF validation — `%PDF-` magic bytes (not extension) and size limit
-- [ ] File store — save bytes under a generated id, delete by id
-- [ ] `document_id` — a UUID **we** generate, carried in Chroma metadata. Never
+- [x] PDF validation — `%PDF-` magic bytes (not extension) and size limit
+- [x] File store — save bytes under a generated id, delete by id
+- [x] `document_id` — a UUID **we** generate, carried in Chroma metadata. Never
       derived from the filename, never left to Chroma to assign. Phase 2's
       `documents.id` reuses these exact ids, so no vectors need re-embedding
-- [ ] Loader — `PDFPlumberLoader` → one `Document` per page
-- [ ] `NO_TEXT_EXTRACTED` guard — fail if extracted text is under ~100 chars
-- [ ] Chunker — `RecursiveCharacterTextSplitter`, attaching `document_id`,
+- [x] Loader — `PDFPlumberLoader` → one `Document` per page
+- [x] `NO_TEXT_EXTRACTED` guard — fail if extracted text is under ~100 chars
+- [x] Chunker — `RecursiveCharacterTextSplitter`, attaching `document_id`,
       `filename`, `page`, `ordinal` metadata
-- [ ] Embeddings — Gemini `gemini-embedding-001` via `langchain-google-genai`,
+- [x] Embeddings — Gemini `gemini-embedding-001` via `langchain-google-genai`,
       behind a small interface so tests can stub it. **Do not change the model
       in later phases** — a different model means re-embedding every chunk, and
       mixed vectors produce silently meaningless similarity scores
-- [ ] Vector store — Chroma persistent client, `add_documents` with
+- [x] Vector store — Chroma persistent client, `add_documents` with
       deterministic ids (`{document_id}:{ordinal}`) so re-runs upsert
-- [ ] Cleanup on failure — delete the saved file if embedding fails, so no
+- [x] Cleanup on failure — delete the saved file if embedding fails, so no
       document is left unqueryable with no trace
 
 ## 3. API
