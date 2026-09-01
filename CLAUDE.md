@@ -15,9 +15,6 @@ Each entry covers:
 - What was built, and the files touched
 - How Claude was used on it — what it generated, designed, or reviewed, and how
   much was accepted as-is
-- Where Claude was corrected: wrong assumptions, rejected designs, hallucinated
-  APIs, over-engineering that got cut. Record these honestly — an entry with no
-  course corrections reads as incomplete
 - Where AI removed manual work
 
 Prompts that ship in the product live in versioned files in the codebase with
