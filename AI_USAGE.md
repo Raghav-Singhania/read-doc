@@ -1,14 +1,5 @@
 # AI Usage
 
----
+How Claude was used to build this project, entry by entry.
 
-## 2026-09-01 — Planning documentation
-
-Two documents written with Claude before any implementation:
-
-- **`docs/DECISIONS.md`** — what was decided and why. Scope calls, the
-  constraints they impose, and the stack. Read at the start of any
-  implementation task so a settled choice isn't quietly reopened.
-- **`docs/FLOWS.md`** — what the system does. Sequence and failure paths for
-  all eight request paths and background jobs. Read before implementing a flow,
-  updated whenever real behaviour diverges.
+_No entries yet — the first lands with the first implementation chunk._

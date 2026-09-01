@@ -2,24 +2,29 @@
 
 ## AI_USAGE.md is part of "done"
 
-`AI_USAGE.md` is a graded deliverable. After each implementation chunk, append
-an entry before treating the chunk as finished. Each entry covers:
+`AI_USAGE.md` is a graded deliverable recording **how AI was used to build each
+feature**. It is not a prompt archive — never paste prompt text into it.
+
+**Trigger:** when you tick a checkbox in `PHASE_1.md`, add or extend the
+`AI_USAGE.md` entry in the same edit. A ticked box with no matching entry means
+the entry was skipped — write it while the work is fresh, since the corrections
+are the first thing to blur.
+
+Each entry covers:
 
 - What was built, and the files touched
-- The actual prompt or template, where the prompt is the interesting part
-- Prompt iterations — what v1 got wrong, what v2 changed
+- How Claude was used on it — what it generated, designed, or reviewed, and how
+  much was accepted as-is
 - Where Claude was corrected: wrong assumptions, rejected designs, hallucinated
   APIs, over-engineering that got cut. Record these honestly — an entry with no
   course corrections reads as incomplete
 - Where AI removed manual work
 
-Version shipped prompts in the codebase and reference the version from the entry.
+Prompts that ship in the product live in versioned files in the codebase with
+their reasoning alongside them, not in this file.
 
 ## Docs
 
-- `docs/DECISIONS.md` — settled decisions and rationale. Read at the start of
-  any implementation task; add new decisions in the same format.
-- `docs/FLOWS.md` — behavioural spec for every request path and background job.
-  Read before implementing a flow; update it in the same commit whenever
-  implemented behaviour diverges. A stale flow doc is worse than none.
+- `PHASE_1.md` — the build list. Tick items as they land, and see the trigger
+  above.
 - `README.md` — setup, architecture, assumptions, known limitations.
