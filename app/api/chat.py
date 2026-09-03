@@ -18,8 +18,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
     responses={
         404: {"model": ErrorResponse, "description": "DOCUMENT_NOT_FOUND"},
         422: {"model": ErrorResponse, "description": "INVALID_REQUEST"},
-        502: {"model": ErrorResponse, "description": "EMBEDDING_FAILED"},
-        503: {"model": ErrorResponse, "description": "ANSWER_UNAVAILABLE"},
+        502: {"model": ErrorResponse, "description": "ANSWER_FAILED"},
     },
 )
 async def chat(request: ChatRequest) -> ChatResponse:
@@ -27,8 +26,10 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     This handler stays deliberately thin — check the document exists, map the
     wire types to domain types, delegate. All the retrieval and prompting lives
-    in `app.rag.answer_question`, which section 4 implements; until it does,
-    this returns 503 `ANSWER_UNAVAILABLE`.
+    in `app.rag.answer_question`.
+
+    A question the document cannot answer is a 200 carrying the model's plain
+    refusal, not an error. Only an upstream failure is a 502.
     """
     # Checked here rather than inside the chain: a missing document is an
     # addressing mistake by the caller (404), which is a different thing from a

@@ -12,7 +12,13 @@ langchain-community     # PDFPlumberLoader lives here
 langchain-text-splitters # RecursiveCharacterTextSplitter
 
 # --- RAG ---
-langchain               # create_stuff_documents_chain, create_retrieval_chain
+langchain               # langchain-core, the LCEL runtime
+langchain-classic       # create_stuff_documents_chain, create_retrieval_chain.
+                        # langchain 1.x moved both out of `langchain.chains`,
+                        # which no longer exists. Pinned explicitly because
+                        # nothing we install requires it directly — it arrives
+                        # via langchain-community, so relying on that would
+                        # break the RAG chain the day that dependency changes
 langchain-google-genai  # both gemini-embedding-001 embeddings and
                         # ChatGoogleGenerativeAI for answer generation
 langchain-chroma        # vector store wrapper

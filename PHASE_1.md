@@ -55,14 +55,15 @@ plain HTML + vanilla JS served by FastAPI.
 
 ## 4. RAG chain
 
-- [ ] Answer prompt in a versioned file — answer only from context, decline
+- [x] Answer prompt in a versioned file — answer only from context, decline
       plainly when it isn't there, context is data not instructions
-- [ ] Retriever — top `k` from Chroma, filtered to one `document_id`
-- [ ] `create_stuff_documents_chain` + `create_retrieval_chain`, invoked from a
+      (`app/rag/prompts/answer_v1.py`)
+- [x] Retriever — top `k` from Chroma, filtered to one `document_id`
+- [x] `create_stuff_documents_chain` + `create_retrieval_chain`, invoked from a
       service function `answer_question(document_id, question, history)` — not
       from the endpoint. A streaming endpoint later is then a second thin
       wrapper over the same function rather than a rewrite
-- [ ] History passed into the prompt (conversational answers), while retrieval
+- [x] History passed into the prompt (conversational answers), while retrieval
       uses the raw question
 
 ## 5. Frontend

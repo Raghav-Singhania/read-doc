@@ -59,14 +59,13 @@ class EmbeddingError(AppError):
     status_code = 502
 
 
-class AnswerUnavailableError(AppError):
-    """Answer generation is not wired up yet — section 4 builds the chain.
+class AnswerGenerationError(AppError):
+    """Retrieval or generation failed — an upstream fault, not the user's.
 
-    TEMPORARY. `app/rag/chain.py` raises this so `POST /api/chat` has an
-    honest reply (503, "not ready") instead of a 500 traceback while the
-    endpoint and the chain land in different sections. Delete both this class
-    and the raise once `answer_question` returns a real answer.
+    Covers both halves of the chain, because the client's recourse is the same
+    either way: retry. A question the document simply cannot answer is not this
+    error — that is a 200 carrying the model's refusal.
     """
 
-    code = "ANSWER_UNAVAILABLE"
-    status_code = 503
+    code = "ANSWER_FAILED"
+    status_code = 502
