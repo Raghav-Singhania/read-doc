@@ -41,13 +41,15 @@ plain HTML + vanilla JS served by FastAPI.
 
 ## 3. API
 
-- [ ] `POST /api/documents` — validate → save → load → chunk → embed → store,
+- [x] `POST /api/documents` — validate → save → load → chunk → embed → store,
       inline. Returns document id, filename, page count, chunk count
-- [ ] `GET /api/documents` — distinct documents from Chroma metadata (there is
+- [x] `GET /api/documents` — distinct documents from Chroma metadata (there is
       no documents table)
-- [ ] `POST /api/chat` — `{document_id, question, history}` → `{answer}`
-- [ ] Error responses — `413`, `415`, `422 NO_TEXT_EXTRACTED`, `404`, `502`
-- [ ] `async def` handlers throughout — streaming and an async DB driver both
+- [x] `POST /api/chat` — `{document_id, question, history}` → `{answer}`.
+      Delegates to `app.rag.answer_question`, which section 4 implements; until
+      then it returns `503 ANSWER_UNAVAILABLE`
+- [x] Error responses — `413`, `415`, `422 NO_TEXT_EXTRACTED`, `404`, `502`
+- [x] `async def` handlers throughout — streaming and an async DB driver both
       need it in later phases, and converting sync handlers afterwards is
       avoidable work
 

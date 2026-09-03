@@ -89,3 +89,59 @@ itself when a step fails.
 
 Version-checking each API, finding the loader's path leak instead of trusting
 its docs, building PDF fixtures from scratch, and the full verification pass.
+## Phase 1 · Section 3 — API
+
+**Built:** the HTTP layer — upload and ingest a PDF, list what is stored, and
+the chat endpoint's request/response contract, all behind one error envelope.
+
+**Files:** `app/api/{__init__,schemas,documents,chat,errors}.py`,
+`app/documents.py`, `app/rag/{__init__,chain}.py`, `app/main.py`, `app/errors.py`.
+
+### What Claude did
+
+- Probed the installed libraries before writing against them, rather than
+  assuming: `Chroma.get`'s signature, and that `include=[]` returns ids only —
+  which is what makes the chat endpoint's existence check constant-cost instead
+  of pulling a chunk's 3072-float vector to answer a yes/no question.
+- Wrote `app/documents.py`, deriving the catalogue from chunk metadata since
+  there is no documents table, grouping by `document_id` for filename, chunk
+  count and page count. Ordered by filename: metadata carries no upload
+  timestamp, so Chroma's own ordering is an implementation detail that would
+  reshuffle the picker between requests.
+- Put the blocking work on the threadpool. `ingest_pdf` parses on CPU and waits
+  on Gemini for seconds; called directly from an `async def` handler it would
+  block the event loop and stall every concurrent request, so the `async`
+  requirement in the plan is satisfied with `run_in_threadpool` rather than by
+  making the handlers async in name only.
+- Capped the upload while reading it, in 64 KiB slices, instead of one
+  `await file.read()` — which would have allocated the whole body before the
+  size check ever ran. Reading one slice *past* the ceiling is what lets
+  `validate_pdf` distinguish "over the limit" from "just fits". Measured: a
+  100x-oversized upload pulls 1.05 MB against a 1 MB limit.
+- Normalised FastAPI's own validation failures into the same
+  `{"error": {code, message}}` envelope as `AppError`. FastAPI defaults to
+  `{"detail": [...]}`, which would have left the frontend parsing two error
+  shapes. `AppError` needed no isinstance ladder — section 2's `code` and
+  `status_code` attributes carry it.
+- Built section 4's seam as a real module, `app/rag/chain.py`, with `Turn`
+  defined there rather than imported from `app.api.schemas`, so the service
+  does not depend on the web layer. Section 4 is now an edit to that one file.
+- Verified with 40 assertions against real Chroma and a stubbed embedder: the
+  five rejection paths, the error envelope's shape on each, cleanup leaving no
+  orphan file, listing round-trip, chat's 404 and its six validation failures,
+  and 502 on an embedder that raises. Then a real `uvicorn` boot, including one
+  live Gemini upload, and removed the storage directory that test created.
+
+### Where AI removed manual work
+
+Checking `Chroma.get`'s behaviour instead of inferring it, catching the
+ignored-kwarg trap, and the whole 40-assertion verification pass including the
+live boot.
+
+### Known gap
+
+`page_count` means different things on the two endpoints. The upload reports
+what the loader saw; the listing reports the highest page that produced a chunk,
+so a document whose last pages are images undercounts there. Recording it rather
+than hiding it — the fix is a `page_count` in chunk metadata, which would change
+section 2's metadata contract.

@@ -57,3 +57,16 @@ class EmbeddingError(AppError):
 
     code = "EMBEDDING_FAILED"
     status_code = 502
+
+
+class AnswerUnavailableError(AppError):
+    """Answer generation is not wired up yet — section 4 builds the chain.
+
+    TEMPORARY. `app/rag/chain.py` raises this so `POST /api/chat` has an
+    honest reply (503, "not ready") instead of a 500 traceback while the
+    endpoint and the chain land in different sections. Delete both this class
+    and the raise once `answer_question` returns a real answer.
+    """
+
+    code = "ANSWER_UNAVAILABLE"
+    status_code = 503
