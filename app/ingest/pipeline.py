@@ -7,6 +7,7 @@ in the endpoint so that moving it onto a queue later means calling
 `ingest_pdf` from a worker instead of rewriting it.
 """
 
+import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,8 @@ from app.ingest import files
 from app.ingest.chunker import chunk_id, chunk_pages
 from app.ingest.loader import load_pages
 from app.ingest.validation import validate_pdf
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -108,7 +111,14 @@ def _store(
     except AppError:
         raise
     except Exception as exc:
+        # The client gets one generic 502, deliberately — it can do nothing
+        # with an upstream provider's wording. But the cause has to land
+        # somewhere, or a rate limit, a timeout and a rejected key are all
+        # indistinguishable from the outside, and each needs a different fix.
+        logger.exception(
+            "Embedding %d chunks failed", len(chunks)
+        )
         raise EmbeddingError(
             "Could not embed the document. The embedding service may be "
-            "unavailable or the API key may be rejected."
+            "unavailable, rate limited, or the API key may be rejected."
         ) from exc

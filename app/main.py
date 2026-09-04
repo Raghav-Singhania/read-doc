@@ -4,6 +4,7 @@ Run locally with:
     uvicorn app.main:app --reload
 """
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -12,6 +13,12 @@ from fastapi.staticfiles import StaticFiles
 from app.api import chat_router, documents_router
 from app.api.errors import register_error_handlers
 from app.config import settings
+
+# Uvicorn configures only its own `uvicorn*` loggers and leaves the root logger
+# untouched, so without this line every `logger.info` and `logger.exception` in
+# the app is discarded — including the one place an upstream Gemini failure is
+# recorded. A 502 would then be all anyone ever saw of it.
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="read-doc")
 
