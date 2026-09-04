@@ -1,0 +1,429 @@
+/* read-doc — all styling for both screens.
+   Handwritten, no framework. Tokens first, then layout, then components. */
+
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --border: #e2e2e6;
+  --border-strong: #c9c9d0;
+  --text: #1c1c1f;
+  --text-muted: #6b6b76;
+  --accent: #2f5bd7;
+  --accent-hover: #244aba;
+  --accent-soft: #eef2fd;
+  --danger: #b3261e;
+  --danger-soft: #fdeceb;
+  --ok: #1c6b45;
+  --ok-soft: #eaf6ef;
+
+  --radius: 10px;
+  --gap: 16px;
+  --maxw: 760px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Every interactive element gets the same visible ring. :focus-visible rather
+   than :focus so a mouse click does not leave an outline behind. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------- masthead ------------------------------- */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 24px 20px 0;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.tab {
+  padding: 6px 12px;
+  font: inherit;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: #ececf0;
+}
+
+/* Driven by the ARIA state, so the visual and the accessible state cannot
+   drift apart — there is only one thing to set. */
+.tab[aria-selected="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+/* --------------------------------- views -------------------------------- */
+
+main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.view-title {
+  margin: 8px 0 4px;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.view-hint {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------- buttons ------------------------------- */
+
+.btn {
+  display: inline-block;
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  color: #fff;
+  background: var(--accent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-quiet {
+  color: var(--text-muted);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.btn-quiet:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ------------------------------- drop zone ------------------------------ */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  text-align: center;
+  background: var(--surface);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+}
+
+/* Set from JS on dragenter/dragover. */
+.dropzone.is-dragging {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* While a request is in flight the zone is inert, so a second file cannot be
+   dropped onto an upload already running. */
+.dropzone.is-busy {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.dropzone-icon {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dropzone-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.dropzone-or {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------- upload status ----------------------------- */
+
+.status:not(:empty) {
+  margin-top: var(--gap);
+}
+
+.card {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.card-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: #f3c9c6;
+}
+
+.card-ok {
+  background: var(--ok-soft);
+  border-color: #c3e3d1;
+}
+
+.card-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.card-ok .card-title {
+  color: var(--ok);
+}
+
+.card-file {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.card-meta {
+  margin: 2px 0 14px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Phase A: a real percentage. Phase B: an indeterminate sweep, because
+   synchronous ingest reports no progress once the bytes are sent. */
+.bar {
+  height: 8px;
+  overflow: hidden;
+  background: #e6e6ea;
+  border-radius: 999px;
+}
+
+.bar-fill {
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.15s linear;
+}
+
+.bar.is-indeterminate .bar-fill {
+  width: 40%;
+  animation: sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+.bar-label {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------- chat -------------------------------- */
+
+.chat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--gap);
+}
+
+.picker-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.picker {
+  flex: 1 1 200px;
+  min-width: 0; /* lets a long filename shrink instead of forcing overflow */
+  padding: 8px 10px;
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 260px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.empty {
+  margin: auto;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.bubble {
+  max-width: min(80%, 560px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  white-space: pre-wrap;   /* keep the model's paragraph breaks */
+  overflow-wrap: anywhere; /* a long token must not widen the page */
+}
+
+.bubble-user {
+  align-self: flex-end;
+  color: #fff;
+  background: var(--accent);
+  border-bottom-right-radius: 4px;
+}
+
+.bubble-assistant {
+  align-self: flex-start;
+  background: #f0f0f3;
+  border-bottom-left-radius: 4px;
+}
+
+.bubble-pending {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Failures are a full-width row, not a bubble: an error is not something the
+   document said. */
+.row-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid #f3c9c6;
+  border-radius: 10px;
+}
+
+.row-error span {
+  flex: 1 1 auto;
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: var(--gap);
+}
+
+.composer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 160px;
+  padding: 10px 12px;
+  font: inherit;
+  line-height: 1.5;
+  resize: none; /* height is grown from JS to fit the content */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.composer-input:disabled {
+  background: #f1f1f4;
+}
+
+/* ------------------------------ small screens --------------------------- */
+
+@media (max-width: 480px) {
+  .masthead {
+    padding-top: 16px;
+  }
+
+  .masthead h1 {
+    flex: 1 1 100%;
+  }
+
+  .tabs {
+    margin-left: 0;
+  }
+
+  .dropzone {
+    padding: 32px 16px;
+  }
+
+  .bubble {
+    max-width: 92%;
+  }
+}

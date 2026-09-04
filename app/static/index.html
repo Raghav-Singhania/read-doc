@@ -4,9 +4,76 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>read-doc</title>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <h1>read-doc</h1>
-    <p>Static mount is working. The upload and chat screens land in section 5.</p>
+    <header class="masthead">
+      <h1>read-doc</h1>
+      <nav class="tabs" aria-label="Screens">
+        <!-- aria-selected, not a class, carries the state: screen readers get
+             the same information sighted users get from the underline. -->
+        <button id="tab-upload" class="tab" type="button" role="tab" aria-selected="true" aria-controls="view-upload">
+          Upload
+        </button>
+        <button id="tab-chat" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-chat">
+          Chat
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ============================ UPLOAD ============================ -->
+      <section id="view-upload" class="view" role="tabpanel" aria-labelledby="tab-upload">
+        <h2 class="view-title">Upload a PDF</h2>
+        <p class="view-hint">
+          Text-based PDFs up to 20&nbsp;MB. Scanned documents are not supported —
+          there is no OCR.
+        </p>
+
+        <!-- The label wraps the input so clicking anywhere in the zone opens the
+             picker with no JavaScript at all; the drag handlers are an
+             enhancement on top of a control that already works. -->
+        <label id="dropzone" class="dropzone" for="file-input">
+          <svg class="dropzone-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 16V4m0 0L8 8m4-4 4 4" />
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+          </svg>
+          <span class="dropzone-title">Drag a PDF here</span>
+          <span class="dropzone-or">or</span>
+          <span class="btn btn-primary" aria-hidden="true">Browse Files</span>
+          <input id="file-input" class="visually-hidden" type="file" accept="application/pdf,.pdf" />
+        </label>
+
+        <!-- aria-live so the outcome is announced, not just drawn. -->
+        <div id="upload-status" class="status" aria-live="polite"></div>
+      </section>
+
+      <!-- ============================= CHAT ============================= -->
+      <section id="view-chat" class="view" role="tabpanel" aria-labelledby="tab-chat" hidden>
+        <div class="chat-bar">
+          <label class="picker-label" for="doc-picker">Document</label>
+          <select id="doc-picker" class="picker"></select>
+          <button id="clear-chat" class="btn btn-quiet" type="button">Clear chat</button>
+        </div>
+
+        <div id="transcript" class="transcript" aria-live="polite" aria-label="Conversation"></div>
+
+        <form id="chat-form" class="composer">
+          <label class="visually-hidden" for="question">Your question</label>
+          <textarea
+            id="question"
+            class="composer-input"
+            name="question"
+            rows="1"
+            maxlength="4000"
+            placeholder="Ask something about this document…"
+            autocomplete="off"
+          ></textarea>
+          <button id="send" class="btn btn-primary" type="submit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
   </body>
 </html>

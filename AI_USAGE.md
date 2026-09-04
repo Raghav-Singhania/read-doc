@@ -226,3 +226,84 @@ A 429 quota exhaustion from Gemini is reported to the client as 502
 429 or 503 would tell a client to back off rather than retry immediately.
 `PHASE_1.md` lists only 502 for this path, so it was left as recorded rather
 than widened here.
+## Phase 1 · Section 5 — Frontend
+
+**Built:** the two screens — drag-and-drop upload with live progress and mapped
+error states, and a chat screen with a document picker, message bubbles and a
+composer. Plain HTML and vanilla JS, no build step.
+
+**Files:** `app/static/{index.html,styles.css,app.js}`.
+
+### What Claude did
+
+- Established that **no Python changes were needed**: `app/main.py` already
+  mounts `app/static/` at `/` with `html=True`, so the section is static assets
+  and the two docs only. Confirmed by serving and checking the content types of
+  `/`, `/styles.css` and `/app.js`.
+- Read the API's own constraints out of the code rather than assuming them, and
+  encoded each in the client: `maxlength="4000"` from the `Question`
+  constraint, history trimmed to the 50 messages `ChatRequest` accepts, the
+  multipart field named `file`, and copy for all eight error codes in
+  `app/errors.py`.
+- **Used `XMLHttpRequest` deliberately, not `fetch`.** `fetch` cannot report
+  request-body progress. Because ingest is synchronous, the request has two
+  phases with different observability: bytes going up are measurable, the
+  server's parse-and-embed is not. A single bar would have hit 100% in a
+  fraction of a second and then frozen for seconds, reading as a hang — so
+  `upload.onprogress` drives a real percentage, and `upload.onload` switches to
+  an indeterminate state with an honest label.
+- Made the drop zone a `<label>` wrapping the file input, so clicking it opens
+  the picker with no JavaScript at all and the drag handlers are an enhancement
+  on a control that already works.
+- Drove `aria-selected` as the single source of truth for the active tab, with
+  CSS keyed off the attribute, so the visual and accessible states cannot drift.
+- Wrote every text node through `textContent`. Model answers, document text and
+  server messages all reach the DOM, and one of the 53 assertions confirms an
+  answer of `<img src=x onerror=alert(1)>` renders as text, not an element.
+- Gave `ANSWER_FAILED` a real Retry button, since the free-tier quota produces
+  it routinely, and made retry drop the orphaned user bubble so the transcript
+  does not accumulate duplicates. `DOCUMENT_NOT_FOUND` reloads the list instead
+  of offering a retry that cannot succeed.
+- Verified by driving the real shipped files: 53 assertions in jsdom against a
+  stubbed server — both progress phases, the client pre-checks, all error
+  mappings including a non-JSON body, the history contract, trimming at 50, the
+  retry path, document switching, and conversation surviving a view round-trip.
+  Then rendered the pages in headless Chrome to check the layout.
+
+### Corrections
+
+- Claude's first reading of a 380px screenshot was that the layout overflowed.
+  It did not: old headless Chrome clamped the window to 500px and **cropped**
+  the image to 380, so the narrow media query never ran. Measured properly by
+  loading the page into iframes at nine widths and reading `scrollWidth`
+  against `innerWidth` — no overflow anywhere from 320px to 900px, with the
+  breakpoint flipping exactly at 480/481. A screenshot was the wrong instrument;
+  the numbers were the right one.
+- The failure path in `loadDocuments()` rendered an error but did not re-render
+  the picker, leaving stale options enabled — so the composer would have sent a
+  question against a document id the client no longer had. Caught on read-back.
+- A docstring described parameters (`pendingNote`, `errorRow`) that were never
+  implemented. Rewritten to describe the one parameter that exists.
+
+### Where AI removed manual work
+
+Reading the client's constraints straight out of the server's schemas instead of
+rediscovering them by trial, and 53 assertions against the real files covering
+the states — mid-upload, each error code, retry — that are tedious to reach by
+clicking.
+
+### Known limitations
+
+- **The 20 MB client-side pre-check duplicates the server's
+  `MAX_UPLOAD_BYTES`.** Removing the duplication needs a config endpoint, which
+  is not in section 3's list. The server stays authoritative: if the two
+  disagree the upload proceeds and the real 413 is shown.
+- **No progress for the server-side phase.** Synchronous ingest exposes no
+  signal, so phase B can only be indeterminate. Real per-stage progress needs
+  phase 2's job polling.
+- **Conversation is lost on reload**, by design — the checklist puts it in page
+  state, and server-side persistence is phase 2.
+- **One document per conversation.** Changing the picker clears the transcript
+  rather than merging; multi-document chat is out of phase 1.
+- **Verified in jsdom and headless Chrome, not in a real browser.** Drag-and-drop
+  with a real OS drag, and the file picker, still want a human click-through.

@@ -68,10 +68,13 @@ plain HTML + vanilla JS served by FastAPI.
 
 ## 5. Frontend
 
-- [ ] Upload screen — drag-and-drop + Browse Files, in-flight progress,
-      success and error states
-- [ ] Chat screen — document picker, message bubbles, input box
-- [ ] Conversation held in page state and sent with each question
+- [x] Upload screen — drag-and-drop + Browse Files, in-flight progress,
+      success and error states. Progress is two-phase: a real percentage while
+      bytes upload, then indeterminate while the server extracts and embeds,
+      since synchronous ingest reports nothing once the body is sent
+- [x] Chat screen — document picker, message bubbles, input box
+- [x] Conversation held in page state and sent with each question, trimmed to
+      the 50 messages `ChatRequest` accepts and excluding the question itself
 
 ## 6. Tests
 
