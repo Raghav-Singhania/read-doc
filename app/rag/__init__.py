@@ -1,5 +1,5 @@
 """Retrieval-augmented answer generation."""
 
-from app.rag.chain import Turn, answer_question
+from app.rag.chain import Answer, Source, Turn, answer_question
 
-__all__ = ["Turn", "answer_question"]
+__all__ = ["Answer", "Source", "Turn", "answer_question"]

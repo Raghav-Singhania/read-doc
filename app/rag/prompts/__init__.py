@@ -3,9 +3,12 @@
 Importers take `ANSWER_SYSTEM_PROMPT` and `CONDENSE_SYSTEM_PROMPT` from here,
 not from a version module, so promoting a new version is a one-line change in
 this file and the chain does not name a version at all.
+
+`answer_v1.py` is still on disk beside v2 and deliberately not exported: it is
+kept to diff against, not to run.
 """
 
-from app.rag.prompts.answer_v1 import ANSWER_SYSTEM_PROMPT, VERSION as ANSWER_VERSION
+from app.rag.prompts.answer_v2 import ANSWER_SYSTEM_PROMPT, VERSION as ANSWER_VERSION
 from app.rag.prompts.condense_v1 import (
     CONDENSE_SYSTEM_PROMPT,
     VERSION as CONDENSE_VERSION,

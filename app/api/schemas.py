@@ -56,8 +56,28 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list, max_length=50)
 
 
+class Citation(BaseModel):
+    """One page an answer drew on.
+
+    `ordinal` is the chunk's position in the document — not shown to a reader,
+    but it is half of the vector-store id, so it is what a later phase needs to
+    jump from a citation back to the exact chunk.
+    """
+
+    document_id: str
+    filename: str
+    page: int
+    ordinal: int
+    snippet: str
+
+
 class ChatResponse(BaseModel):
     answer: str
+    citations: list[Citation] = Field(default_factory=list)
+    # Whether `citations` are what the model said it used ("cited") or merely
+    # what retrieval returned ("retrieved"). The client must label them
+    # differently: only one of the two is a claim about the answer.
+    citation_basis: Literal["cited", "retrieved"] = "retrieved"
 
 
 class ErrorDetail(BaseModel):

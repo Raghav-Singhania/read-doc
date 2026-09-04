@@ -341,9 +341,77 @@ rewritten to stand alone before it is embedded and searched.
 - The prompt interpolated `{input}` while the template also appended the
   question as a human turn — it would have appeared twice. Removed from the
   prompt string.
+- **Shipped broken, found in section 2's testing.** Every follow-up question
+  returned 502. `StrOutputParser` yields a `TextAccessor`, a `str` subclass;
+  the Gemini SDK validates `contents` against a pydantic smart union, a
+  subclass fails to match its `str` member, so pydantic matches `Content` and
+  builds an empty one. The text was dropped with no error and the API answered
+  `500 INTERNAL`. Fixed with `str()` at the tap and again at the embeddings
+  boundary. First questions were unaffected: they reach the retriever as the
+  raw request string, never through the parser.
+- Two wrong diagnoses preceded that fix — call ordering, then a transient 500
+  (retries were added and failed three times identically). Both were argued
+  from behaviour rather than from the request; logging the outgoing body ended
+  it in one attempt. The stub harness had also given a false negative, because
+  `TextAccessor` compares equal to `str` and reprs identically.
 
 ### Where AI removed manual work
 
 Reading the library source, which showed two of the four plan items needed no
 implementation, and the stub harness, which proved the condense call is skipped
 on a first question without spending a Gemini call.
+
+## Phase 2 · Section 2 — Citations
+
+**Built:** page references under each answer, with the model marking which
+excerpts it used.
+
+**Files:** `app/rag/prompts/answer_v2.py`, `app/rag/prompts/__init__.py`,
+`app/rag/chain.py`, `app/rag/__init__.py`, `app/api/schemas.py`,
+`app/api/chat.py`, `app/static/app.js`, `app/static/styles.css`.
+
+### What Claude did
+
+- Found the hook the feature needed in `create_stuff_documents_chain`:
+  `document_prompt` renders each chunk before the model sees it, so excerpts
+  arrive labelled `[page N]`. Without it the model has no way to name a source
+  — `page` sits in metadata the prompt never shows.
+- Wrote `answer_v2.py`, reproducing v1's three rules verbatim and adding a
+  trailing `SOURCES: 4, 7` line. Chose that over `with_structured_output`
+  because structured generation would change the prose v1's rules were tuned
+  for.
+- Implemented the parse in `chain.py`, treating "no marker" and "marker saying
+  none" as different states — the first cannot be called cited, the second is
+  what a refusal produces.
+- Intersected marked pages with what was actually retrieved. A model naming a
+  page that never came back would otherwise render as a real citation, which is
+  the failure this feature exists to prevent.
+- Deduped by page, keeping the first chunk in similarity order, and returned
+  ascending page order for the reader.
+- Split `citation_basis` onto the wire and labelled it in the UI: "Cited" vs
+  "Retrieved", with the snippet as a tooltip.
+- Mapped history down to role and content in `app.js`, so replayed assistant
+  turns no longer carry citations into the prompt's token budget.
+- Verified with stubs across six cases: dedupe, page ordering, snippet
+  trimming, unmarked fallback, refusal, and an invented page number.
+
+### Corrections
+
+- A reply consisting of only the marker left an empty answer. Now treated as
+  unmarked, since a blank assistant bubble reads as a broken app.
+
+### Where AI removed manual work
+
+Reading `create_stuff_documents_chain` for the formatting hook rather than
+building a parallel context formatter, and the six-case stub harness — the
+malformed-output paths are the ones that matter here and none of them is
+reachable by asking a real model nicely.
+
+### Known gaps
+
+- **Stub-verified only.** No live Gemini call, so how reliably the model emits
+  the marker at all is unmeasured. If it usually omits it, every answer falls
+  back to "Retrieved" and the feature is cosmetic.
+- **A dropped page can still be named in prose.** When the model cites an
+  unretrieved page, the citation is removed but the sentence claiming it stays
+  in the answer text.

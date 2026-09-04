@@ -43,20 +43,20 @@ phase 2 work.
 
 *Chain and wire schema only. Phase 1 already stores every field this needs.*
 
-- [ ] Return `context` from the chain instead of discarding it — phase 1
+- [x] Return `context` from the chain instead of discarding it — phase 1
       already carries `page`, `ordinal` and `filename` on every chunk for this
-- [ ] `Citation` schema — `document_id`, `filename`, `page`, `ordinal`,
+- [x] `Citation` schema — `document_id`, `filename`, `page`, `ordinal`,
       `snippet`. Snippet trimmed server-side; the full chunk is not the wire
       format
-- [ ] Dedupe by page before returning. Two chunks from one page are one
+- [x] Dedupe by page before returning. Two chunks from one page are one
       citation to a reader
-- [ ] Answer prompt v2 — a **new versioned file**, `answer_v2.py`, not an edit
+- [x] Answer prompt v2 — a **new versioned file**, `answer_v2.py`, not an edit
       to v1. Asking the model to mark which context it used changes answer
       wording, so the old prompt has to stay readable next to the new one
-- [ ] Cited but unused — do not claim a chunk was used because it was
+- [x] Cited but unused — do not claim a chunk was used because it was
       retrieved. Either the model marks its sources or the response says
       "retrieved", not "cited"
-- [ ] Frontend — citations under each answer, page-numbered
+- [x] Frontend — citations under each answer, page-numbered
 
 ## 3. Multi-document chat
 

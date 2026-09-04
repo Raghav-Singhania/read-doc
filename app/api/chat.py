@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from starlette.concurrency import run_in_threadpool
 
-from app.api.schemas import ChatRequest, ChatResponse, ErrorResponse
+from app.api.schemas import ChatRequest, ChatResponse, Citation, ErrorResponse
 from app.documents import document_exists
 from app.errors import DocumentNotFoundError
 from app.rag import Turn, answer_question
@@ -53,4 +53,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
         answer_question, request.document_id, request.question, history
     )
 
-    return ChatResponse(answer=answer)
+    return ChatResponse(
+        answer=answer.text,
+        citations=[
+            Citation(
+                document_id=source.document_id,
+                filename=source.filename,
+                page=source.page,
+                ordinal=source.ordinal,
+                snippet=source.snippet,
+            )
+            for source in answer.sources
+        ],
+        citation_basis=answer.basis,
+    )

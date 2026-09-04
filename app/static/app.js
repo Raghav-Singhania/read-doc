@@ -37,7 +37,8 @@ const state = {
   view: "upload",
   documents: [],
   selectedId: null,
-  messages: [], // [{ role: "user" | "assistant", content }] — page state only
+  // [{ role, content }], plus citations + citationBasis on assistant turns.
+  messages: [], // page state only
   busy: false,
 };
 
@@ -373,6 +374,8 @@ function renderTranscript(loadError) {
   for (const message of state.messages) {
     const kind = message.role === "user" ? "bubble-user" : "bubble-assistant";
     el.transcript.append(make("div", `bubble ${kind}`, message.content));
+    const sources = citationRow(message);
+    if (sources) el.transcript.append(sources);
   }
 
   if (state.busy) {
@@ -380,6 +383,35 @@ function renderTranscript(loadError) {
   }
 
   el.transcript.scrollTop = el.transcript.scrollHeight;
+}
+
+/** Page references under an answer, or null when there are none.
+ *
+ *  The label is not cosmetic. "Cited" means the model named these pages as the
+ *  ones it used; "Retrieved" means it did not, so they are only what the search
+ *  returned and the answer may rest on none of them. Presenting the second as
+ *  the first would be the app vouching for something it cannot check. */
+function citationRow(message) {
+  if (!message.citations || message.citations.length === 0) return null;
+
+  const cited = message.citationBasis === "cited";
+  const row = make("div", "citations");
+
+  const label = make("span", "citations-label", cited ? "Cited" : "Retrieved");
+  label.title = cited
+    ? "Pages the model said it used to answer."
+    : "The model did not mark its sources. These are the pages that were searched.";
+  row.append(label);
+
+  for (const citation of message.citations) {
+    const chip = make("span", "citation", `Page No. ${citation.page}`);
+    // The snippet is the evidence; a tooltip keeps it out of the way until
+    // someone wants to check the page against what was actually read.
+    chip.title = citation.snippet;
+    row.append(chip);
+  }
+
+  return row;
 }
 
 function appendErrorRow(message, retry) {
@@ -428,7 +460,12 @@ async function ask(question) {
   // Snapshot the history BEFORE adding this question. The server puts history
   // and the question into the prompt separately, so including it in both would
   // send it twice.
-  const history = state.messages.slice(-MAX_HISTORY_MESSAGES);
+  // Mapped down to role and content: assistant turns also carry citations in
+  // page state, and replaying those to the server would send snippets it
+  // already has back into the prompt's token budget.
+  const history = state.messages
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map(({ role, content }) => ({ role, content }));
   const documentId = state.selectedId;
 
   state.messages.push({ role: "user", content: question });
@@ -457,15 +494,20 @@ async function ask(question) {
   renderPicker();
 
   if (response.ok) {
-    let answer;
+    let payload;
     try {
-      answer = JSON.parse(bodyText).answer;
+      payload = JSON.parse(bodyText);
     } catch {
       renderTranscript();
       appendErrorRow("The server returned a response we couldn't read.");
       return;
     }
-    state.messages.push({ role: "assistant", content: answer });
+    state.messages.push({
+      role: "assistant",
+      content: payload.answer,
+      citations: payload.citations ?? [],
+      citationBasis: payload.citation_basis ?? "retrieved",
+    });
     renderTranscript();
     el.question.focus();
     return;

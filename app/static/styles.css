@@ -361,6 +361,37 @@ main {
   font-style: italic;
 }
 
+/* Citations sit under the answer they belong to, aligned with the assistant
+   bubble rather than centred, so the eye reads answer-then-source. */
+.citations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: -0.25rem 0 0.5rem;
+  align-self: flex-start;
+  max-width: 80%;
+  font-size: 0.78rem;
+}
+
+.citations-label {
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+}
+
+/* help cursor advertises the snippet tooltip; without it nothing suggests the
+   chip can be inspected. */
+.citation {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  color: #374151;
+  background: #f9fafb;
+  cursor: help;
+}
+
 /* Failures are a full-width row, not a bubble: an error is not something the
    document said. */
 .row-error {
