@@ -307,3 +307,43 @@ clicking.
   rather than merging; multi-document chat is out of phase 1.
 - **Verified in jsdom and headless Chrome, not in a real browser.** Drag-and-drop
   with a real OS drag, and the file picker, still want a human click-through.
+
+## Phase 2 · Section 1 — Question condensing
+
+**Built:** a condense step in front of retrieval, so a follow-up question is
+rewritten to stand alone before it is embedded and searched.
+
+**Files:** `app/rag/prompts/condense_v1.py`, `app/rag/prompts/__init__.py`,
+`app/rag/chain.py`.
+
+### What Claude did
+
+- Read `create_history_aware_retriever` and `create_retrieval_chain` before
+  writing anything. Two plan items turned out to be already provided: the
+  helper skips condensing on empty history, and the retrieval chain leaves
+  `input` untouched, so the answer prompt keeps the user's wording. No code was
+  written for either.
+- Wrote `condense_v1.py` — four rules: rewrite don't answer, return a
+  standalone question unchanged, add nothing not in the conversation, treat
+  history as data. The fourth is not in the plan; it was carried over from
+  `answer_v1.py` because prior assistant turns quote the uploaded document.
+- Wired the step into `answer_question`, sharing one model between the condense
+  and answer calls. A cheaper condense model was rejected on `answer_v1.py`'s
+  own evidence: `flash-lite` obeyed an injected instruction 3 of 3 times.
+- Added the logging tap between rewrite and retriever.
+- Updated the `chain.py` comments that explained why condensing was absent.
+- Verified with a scripted fake model and recording retriever: one call and the
+  raw question with no history, two calls and the rewrite with history, filter
+  unchanged.
+
+### Corrections
+
+- The prompt interpolated `{input}` while the template also appended the
+  question as a human turn — it would have appeared twice. Removed from the
+  prompt string.
+
+### Where AI removed manual work
+
+Reading the library source, which showed two of the four plan items needed no
+implementation, and the stub harness, which proved the condense call is skipped
+on a first question without spending a Gemini call.

@@ -1,4 +1,5 @@
-"""Answer generation: retrieve from one document, then answer from what came back.
+"""Answer generation: condense the question, retrieve from one document, then
+answer from what came back.
 
 `answer_question` is the whole public surface. `POST /api/chat` calls it and
 nothing else, which is what keeps a streaming endpoint later a second thin
@@ -9,22 +10,30 @@ The service must not depend on the web layer — that direction of import is wha
 makes this callable from a worker, a test, or a CLI.
 """
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import partial
 from typing import Literal
 
-from langchain_classic.chains import create_retrieval_chain
+from langchain_classic.chains import (
+    create_history_aware_retriever,
+    create_retrieval_chain,
+)
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.retrievers import BaseRetriever
+from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_core.vectorstores import VectorStore
 
 from app.config import settings
 from app.errors import AnswerGenerationError, AppError
 from app.llm import build_llm
-from app.rag.prompts import ANSWER_SYSTEM_PROMPT
+from app.rag.prompts import ANSWER_SYSTEM_PROMPT, CONDENSE_SYSTEM_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -51,6 +60,20 @@ ANSWER_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
+# Same shape, different job: this one produces a search query, not an answer.
+#
+# `chat_history` is required here, unlike above. This prompt is only ever
+# rendered on the branch that has history — see `_condensing_retriever` — and a
+# condense prompt reached with an empty conversation would be a bug worth
+# failing on rather than quietly rewriting a question against nothing.
+CONDENSE_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", CONDENSE_SYSTEM_PROMPT),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
 
 def answer_question(
     document_id: str,
@@ -68,28 +91,40 @@ def answer_question(
     The caller has already checked that `document_id` exists, so this does not
     repeat that lookup.
     """
-    retriever = _build_retriever(document_id, vector_store=vector_store)
-    combine_docs = create_stuff_documents_chain(llm or build_llm(), ANSWER_PROMPT)
+    # One model instance for both jobs — condensing and answering.
+    #
+    # A smaller, cheaper model for the condense step is the obvious saving and
+    # is deliberately not taken. Condensing reads the same untrusted text the
+    # answer step does (prior assistant turns quote the uploaded document), and
+    # `answer_v1.py` records `gemini-3.1-flash-lite` obeying an injected
+    # "ignore all previous instructions" on 3 of 3 runs. A prompt-injected
+    # search query fails more quietly than a prompt-injected answer: the user
+    # reads a fluent answer built from the wrong chunks.
+    model = llm or build_llm()
+
+    retriever = _condensing_retriever(
+        document_id, question, model=model, vector_store=vector_store
+    )
+    combine_docs = create_stuff_documents_chain(model, ANSWER_PROMPT)
     chain = create_retrieval_chain(retriever, combine_docs)
 
     try:
-        # `input` is what the retriever embeds and searches on — the raw
-        # question, deliberately not rewritten against the history. Condensing
-        # is out of scope for phase 1, and a condensing step that misfires
-        # silently retrieves the wrong chunks.
-        #
-        # `chat_history` reaches the prompt but never the retriever, so a
-        # follow-up reads as conversational without the history distorting what
-        # gets retrieved.
+        # `input` is the user's question, verbatim, and it stays that way:
+        # `create_retrieval_chain` assigns `context` and `answer` onto the input
+        # dict without replacing `input`, so the condensed query reaches the
+        # retriever while the answer prompt still sees what the user actually
+        # typed. Answering the rewrite instead would let a condensing slip
+        # change the question the user gets an answer to, not just the chunks.
         result = chain.invoke(
             {"input": question, "chat_history": _as_messages(history)}
         )
     except AppError:
         raise
     except Exception as exc:
-        # Covers both upstream steps — Chroma's similarity search and the
-        # Gemini call. Neither is the user's fault, so both are 502. They share
-        # one code because the client's recourse is the same either way: retry.
+        # Covers all three upstream steps now — the condense call, Chroma's
+        # similarity search, and the answer call. None is the user's fault, so
+        # all are 502, and they share one code because the client's recourse is
+        # the same either way: retry.
         raise AnswerGenerationError(
             "Could not generate an answer. The model may be unavailable or "
             "rate limited. Try again in a moment."
@@ -99,6 +134,49 @@ def answer_question(
     # `answer`. Only the answer goes to the client in phase 1 — `context` is
     # what citations would be built from in a later phase.
     return str(result["answer"]).strip()
+
+
+def _condensing_retriever(
+    document_id: str,
+    question: str,
+    *,
+    model: BaseChatModel,
+    vector_store: VectorStore | None = None,
+) -> Runnable:
+    """The document retriever, behind a question-rewriting step.
+
+    `create_history_aware_retriever` branches on the history itself: with an
+    empty `chat_history` it hands `input` straight to the retriever and the
+    condense prompt is never rendered. So a first question costs no extra model
+    call, and — more to the point — a question that arrives with no conversation
+    to resolve against is never rewritten. That guard is the library's, not
+    ours; this function only has to not defeat it.
+
+    The logging tap sits between the rewrite and the retriever, so what gets
+    recorded is the exact string that was embedded and searched.
+    """
+    tapped = RunnableLambda(
+        partial(_log_rewrite, original=question), name="log_condensed_question"
+    ) | _build_retriever(document_id, vector_store=vector_store)
+
+    return create_history_aware_retriever(model, tapped, CONDENSE_PROMPT)
+
+
+def _log_rewrite(query: str, *, original: str) -> str:
+    """Record a rewritten question on its way to the retriever, unchanged.
+
+    Phase 2's plan asks for this because a condensing step that misfires
+    retrieves the wrong chunks *silently*: the answer still reads well, and
+    without the rewrite recorded there is nothing to look at afterwards.
+
+    Only a changed question is logged. The tap runs on both of the library's
+    branches, and on the no-history branch `query` is the original — as it also
+    is when the model correctly decides a standalone question needs no rewrite.
+    Neither is worth a line, and neither can be told from the other here.
+    """
+    if query != original:
+        logger.info("Condensed question for retrieval: %r -> %r", original, query)
+    return query
 
 
 def _build_retriever(
